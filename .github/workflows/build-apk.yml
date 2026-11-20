@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   build:
@@ -61,19 +62,36 @@ jobs:
         working-directory: build-src/SubhVivahApp
         run: gradle assembleDebug --no-daemon --stacktrace
 
+      # Purani artifacts delete — GitHub ka 500 MB quota bharta rehta tha
+      - name: Clean old artifacts
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ids=$(gh api "repos/${{ github.repository }}/actions/artifacts" --paginate \
+                --jq '.artifacts[] | select(.name=="subh-vivah-debug-apk") | .id' | sort -rn | tail -n +2)
+          for id in $ids; do
+            echo "deleting artifact $id"
+            gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" || true
+          done
+
       - name: Upload APK artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: subh-vivah-debug-apk
           path: build-src/SubhVivahApp/app/build/outputs/apk/debug/*.apk
+          retention-days: 2
+          overwrite: true
           if-no-files-found: error
 
       - name: Attach APK to release (apk-latest)
         if: github.ref == 'refs/heads/main'
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-latest
           name: Shubh Vivah APK (latest)
           files: build-src/SubhVivahApp/app/build/outputs/apk/debug/*.apk
           make_latest: true
-        continue-on-error: true
