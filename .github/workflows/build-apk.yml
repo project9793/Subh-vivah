@@ -50,7 +50,11 @@ jobs:
       - name: Unzip project
         run: |
           mkdir -p build-src
-          unzip -q SubhVivah-Android.zip -d build-src
+          # sabse nayi zip chuno (naam me version ho ya na ho)
+          ZIP=$(ls -t SubhVivah-Android*.zip 2>/dev/null | head -1)
+          if [ -z "$ZIP" ]; then echo "koi SubhVivah-Android*.zip nahi mili"; exit 1; fi
+          echo "unzipping $ZIP"
+          unzip -q "$ZIP" -d build-src
           ls build-src/SubhVivahApp
 
       - name: Copy keystore into project
